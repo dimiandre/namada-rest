@@ -1,4 +1,3 @@
-```
 # Namada REST API
 
 Welcome, Earthling! 🌍👽 You've just docked at the most stellar REST API in the Milky Way: The **Namada REST API**. Serving data at the speed of light across the cosmos, our API is the go-to source for all your interstellar governance and epoch inquiries. Strap in as we guide you through setting up your own galactic data station.
@@ -6,6 +5,7 @@ Welcome, Earthling! 🌍👽 You've just docked at the most stellar REST API in 
 ## Prerequisites
 
 Before launching, make sure you have the following onboard:
+
 - Rust: The metal of the cosmos. Ensure you're equipped with the latest stable version to avoid any unexpected asteroid fields.
 - Cargo: Your cargo hold for Rust crates. It comes bundled with Rust, so no need for extra spacewalks.
 
@@ -55,4 +55,3 @@ This project is under the galaxy's most powerful and freedom-respecting license:
 ## Farewell
 
 May your queries be swift and your data vast. Happy exploring, space coder! 🚀✨
-```
