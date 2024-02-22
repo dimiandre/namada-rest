@@ -5,7 +5,6 @@ use axum::{
 };
 use namada_sdk::{
     error::{self, PinnedBalanceError},
-    eth_bridge::protocol::transactions::votes::Tally,
     governance::utils::{ProposalResult, TallyType},
     rpc,
     state::Epoch,
