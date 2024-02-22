@@ -1,12 +1,23 @@
 use axum::{
-    response::{IntoResponse, Response},
-    Json,
+    extract::{Path, State}, response::{IntoResponse, Response}, Json
 };
-use namada_sdk::error::{self, Error, PinnedBalanceError};
 use serde_json::{json, Value};
-use std::future::Future;
+use namada_sdk::{
+    error::{self, PinnedBalanceError}, governance::utils::ProposalResult, rpc, state::Epoch
+};
+use tendermint_rpc::{self, HttpClient};
 
-use tokio::task::JoinError;
+use crate::ServerState;
+
+pub enum RPCRequestType {
+    QueryEpoch,
+    QueryProposalResult(u64)
+}
+
+pub enum RPCResult {
+    Epoch(Epoch),
+    ProposalResult(Option<ProposalResult>),
+}
 
 pub struct MyErrorWrapper(error::Error);
 
@@ -24,27 +35,59 @@ impl IntoResponse for MyErrorWrapper {
     }
 }
 
-// Adjusted to execute a synchronous operation
-pub async fn spawn_blocking_rpc<F, R>(f: F) -> Result<Json<Value>, MyErrorWrapper>
-where
-    F: FnOnce() -> R + Send + 'static,
-    R: Send + 'static + serde::Serialize,
-{
-    tokio::task::spawn_blocking(f)
-        .await
-        .map_err(|e| handle_join_error(e))
-        .map(|data| Json(json!({ "data": data })))
+pub async fn get_epoch(State(state): State<ServerState>) -> Result<Json<Value>, MyErrorWrapper> {
+    get_rpc_data(state.client, RPCRequestType::QueryEpoch).await
 }
 
-// Handles conversion from JoinError to your error type
-fn handle_join_error(e: JoinError) -> MyErrorWrapper {
-    if e.is_cancelled() {
-        MyErrorWrapper(error::Error::Pinned(
-            PinnedBalanceError::NoTransactionPinned,
-        ))
-    } else {
-        MyErrorWrapper(error::Error::Pinned(
-            PinnedBalanceError::NoTransactionPinned,
-        ))
-    }
+
+pub async fn get_proposals(State(state): State<ServerState>, Path(id): Path<u32>) -> Result<Json<Value>, MyErrorWrapper> {
+    get_rpc_data(state.client, RPCRequestType::QueryProposalResult(id as u64)).await
+}
+
+// We need to do all this mess only because rpc::query_something is !Send which is a requirment for axum 
+pub async fn get_rpc_data(client: HttpClient, req_type: RPCRequestType) -> Result<Json<Value>, MyErrorWrapper> {
+    let result = tokio::task::spawn_blocking(move || {
+        // Execute the blocking operation
+        tokio::runtime::Handle::current().block_on(async {
+            
+            match req_type {
+                RPCRequestType::QueryEpoch => {
+                    rpc::query_epoch(&client).await.map(RPCResult::Epoch)
+                },
+                RPCRequestType::QueryProposalResult(id) => {
+                    rpc::query_proposal_result(&client, id).await.map(RPCResult::ProposalResult)
+                },
+            }
+             
+            })
+    })
+    .await
+    .map_err(|e| {
+        // Directly handle the conversion from JoinError to MyErrorWrapper
+        if e.is_cancelled() {
+            MyErrorWrapper(error::Error::Pinned(
+                PinnedBalanceError::NoTransactionPinned,
+            ))
+        } else {
+            // You can adjust this part to better fit your error model
+            MyErrorWrapper(error::Error::Pinned(
+                PinnedBalanceError::NoTransactionPinned,
+            ))
+        }
+    })?;
+
+    result.map(|rpc_result| {
+        match rpc_result {
+            RPCResult::Epoch(epoch_data) => Json(json!({ "epoch": epoch_data })),
+            RPCResult::ProposalResult(proposal_result) => {
+
+                if let Some(proposal_result) = proposal_result {
+                    return Json(json!({ "result": format!("{}", proposal_result.total_yay_power)}))
+                }
+
+                return Json(json!({"status": "not found"}))
+            },
+        }
+    })
+    .map_err(MyErrorWrapper)
 }
