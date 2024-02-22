@@ -1,0 +1,3 @@
+rpc_url = "https://rpc-namada.kintsugi-nodes.com"
+port = 6969
+bind_ip = "0.0.0.0"
