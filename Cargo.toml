@@ -1,0 +1,24 @@
+[package]
+name = "test-proposal-namada"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-std = "1.11.0"
+futures = "0.3.28"
+getrandom = { version = "0.2" }
+namada_sdk = { git = "https://github.com/anoma/namada.git", rev = "v0.31.5", features = ["std"] }
+rand = {version = "0.8", default-features = false}
+rand_core = {version = "0.6", default-features = false}
+tendermint-config = "0.34.0"
+tendermint-rpc = {version = "0.34.0", default-features = false, features = ["http-client"]}
+tokio = {version = "1.8.2", default-features = false}
+tracing = "0.1"
+tracing-subscriber = "0.3"
+axum = {version = "0.7.4", features = ["macros"] }
+serde = "1.0.197"
+serde_json = "1.0.114"
+hyper = "1.2.0"
+tower-http = "0.5.1"
